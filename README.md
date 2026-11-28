@@ -8,38 +8,38 @@
 [![GitHub issues](https://img.shields.io/github/issues/ppkantorski/nx-ovlloader?color=222222)](https://github.com/ppkantorski/nx-ovlloader/issues)
 [![GitHub stars](https://img.shields.io/github/stars/ppkantorski/nx-ovlloader)](https://github.com/ppkantorski/nx-ovlloader/stargazers)
 
-**nx-ovlloader** is the core loader sysmodule of the [Ultrahand](https://github.com/ppkantorski/Ultrahand-Overlay) / Tesla overlay ecosystem for the Nintendo Switch. It runs as a background process at boot, maps overlay NROs into memory, and chainloads `/switch/.overlays/ovlmenu.ovl` — enabling instant overlay access from any game or application.
+**nx-ovlloader** is the loader sysmodule behind the [Ultrahand](https://github.com/ppkantorski/Ultrahand-Overlay) / Tesla overlay system on the Nintendo Switch. It starts at boot, maps overlay NROs into memory and chainloads `/switch/.overlays/ovlmenu.ovl`, so overlays can be opened from any game or application.
 
-Derived from [nx-hbloader](https://github.com/switchbrew/nx-hbloader), it extends the original with dynamic heap sizing, HOS-version-aware defaults, exit flag signaling, and automatic self-relaunch support via [nx-ovlreloader](https://github.com/ppkantorski/nx-ovlreloader).
+It is based on [nx-hbloader](https://github.com/switchbrew/nx-hbloader), with dynamic heap sizing, defaults that depend on the HOS version, an exit flag, and self-relaunch through [nx-ovlreloader](https://github.com/ppkantorski/nx-ovlreloader).
 
 ---
 
 ## Features
 
-- **Overlay chainloading** — automatically loads `/switch/.overlays/ovlmenu.ovl` (Ultrahand Overlay or Tesla Menu) at boot and after each overlay exits
-- **Dynamic heap sizing** — reads a persistent config at `/config/nx-ovlloader/heap_size.bin`; if none is set, selects **4 MB** by default.
-- **Live heap change detection** — checks for a heap size change between every overlay load, allowing Ultrahand's System Settings to apply a new heap size without a full reboot
-- **Exit flag signaling** — reads `/config/nx-ovlloader/exit_flag.bin` to allow a clean, user-requested exit rather than an automatic reload; the flag is deleted immediately after being consumed
-- **Auto-relaunch via nx-ovlreloader** — on process exit, uses `pmshell` to launch [nx-ovlreloader](https://github.com/ppkantorski/nx-ovlreloader) (`0x420000000007E51B`), which respawns nx-ovlloader without a full console restart
-- **Rotating NRO address strategy** — maps overlay binaries within a predictable 64 GB–256 GB window with 2 MB alignment, falling back to a random search only if the window is exhausted
-- **Atomic load guard** — prevents concurrent `loadNro()` calls via an atomic flag, ensuring safe process-level re-entry
-- **Cached SD filesystem handle** — the SD card filesystem is opened once and reused across all load cycles rather than reopened on every overlay switch
-- **Minimal resource footprint** — one FS session, minimal directory cache, no CWD support; designed to stay out of the way of everything else running on the system
+- **Overlay chainloading:** loads `/switch/.overlays/ovlmenu.ovl` (Ultrahand Overlay or Tesla Menu) at boot and again whenever an overlay exits.
+- **Dynamic heap size:** read from `/config/nx-ovlloader/heap_size.bin`. Without it, the heap is 4 MB.
+- **Heap changes without a reboot:** the heap size is checked before every overlay load, so a new size set in Ultrahand's System Settings applies right away.
+- **Exit flag:** `/config/nx-ovlloader/exit_flag.bin` requests a clean exit instead of a reload. The flag is deleted as soon as it's read.
+- **Auto-relaunch:** when the process exits, it uses `pmshell` to start [nx-ovlreloader](https://github.com/ppkantorski/nx-ovlreloader) (`0x420000000007E51B`), which starts nx-ovlloader again without restarting the console.
+- **Rotating NRO addresses:** overlays are mapped within a fixed 64 GB to 256 GB window at 2 MB alignment. A random search is only used if that window runs out.
+- **Load guard:** an atomic flag keeps two `loadNro()` calls from running at once.
+- **Cached SD handle:** the SD card filesystem is opened once and reused, not reopened on every overlay switch.
+- **Small footprint:** one FS session, a minimal directory cache and no CWD support, so it stays out of the way of everything else on the system.
 
 ---
 
 ## Installation
 
-### Recommended (via Ultrahand full package)
+### Recommended (Ultrahand full package)
 
-The easiest way to install nx-ovlloader is through the complete [Ultrahand Overlay](https://github.com/ppkantorski/Ultrahand-Overlay) `sdout.zip`. Extract it to the root of your SD card — it includes nx-ovlloader, nx-ovlreloader, `ovlmenu.ovl`, and all required folder structure.
+The easiest way is the complete [Ultrahand Overlay](https://github.com/ppkantorski/Ultrahand-Overlay) `sdout.zip`. Extract it to the root of your SD card. It includes nx-ovlloader, nx-ovlreloader, `ovlmenu.ovl` and the folders they need.
 
 ### Manual Install
 
 1. Download the latest release zip from [Releases](https://github.com/ppkantorski/nx-ovlloader/releases/latest) and extract it to the root of your SD card.
-    - This archive includes the correct directory structure for both nx-ovlloader and nx-ovlreloader.
-2. Place the overlay menu at `/switch/.overlays/ovlmenu.ovl` — either [Ultrahand Overlay](https://github.com/ppkantorski/Ultrahand-Overlay) or Tesla Menu.
-3. Reboot your Switch. nx-ovlloader will start automatically with Atmosphère and chainload `ovlmenu.ovl`.
+    - It already has the right folder layout for both nx-ovlloader and nx-ovlreloader.
+2. Put the overlay menu at `/switch/.overlays/ovlmenu.ovl`. This can be [Ultrahand Overlay](https://github.com/ppkantorski/Ultrahand-Overlay) or Tesla Menu.
+3. Reboot your Switch. nx-ovlloader starts with Atmosphère and chainloads `ovlmenu.ovl`.
 
 > **Note:** nx-ovlloader requires [Atmosphère](https://github.com/Atmosphere-NX/Atmosphere) and HOS 9.0.0 or later.
 
@@ -52,19 +52,19 @@ sdmc:/
 ├── atmosphere/
 │   └── contents/
 │       ├── 420000000007E51A/       ← nx-ovlloader sysmodule (Title ID)
-│       │   ├── exefs.nsp           ← compiled sysmodule binary
-│       │   ├── toolbox.json        ← sysmodule metadata
+│       │   ├── exefs.nsp           ← sysmodule binary
+│       │   ├── toolbox.json        ← sysmodule info
 │       │   └── flags/
-│       │       └── boot2.flag      ← enables auto-start at boot
-│       └── 420000000007E51B/       ← nx-ovlreloader sysmodule (for on-demand reloads)
+│       │       └── boot2.flag      ← starts it at boot
+│       └── 420000000007E51B/       ← nx-ovlreloader sysmodule (reloads on demand)
 │           └── exefs.nsp
 ├── config/
 │   └── nx-ovlloader/
-│       ├── heap_size.bin           ← persistent heap size override (4 / 6 / 8 MB); written by Ultrahand
-│       └── exit_flag.bin           ← runtime exit signal (transient; consumed and deleted on next load)
+│       ├── heap_size.bin           ← heap size (4 / 6 / 8 MB), written by Ultrahand
+│       └── exit_flag.bin           ← exit request (deleted on the next load)
 └── switch/
     └── Ultrahand-Reload/
-        └── Ultrahand-Reload.nro    ← respawn nx-ovlloader on-demand from the hbmenu
+        └── Ultrahand-Reload.nro    ← restarts nx-ovlloader from the hbmenu
 ```
 
 ---
@@ -89,7 +89,7 @@ export DEVKITPRO=/opt/devkitpro
 make
 ```
 
-If you want to build the complete package including [nx-ovlreloader](https://github.com/ppkantorski/nx-ovlreloader), also clone it into `external/nx-ovlreloader`:
+To build the full package with [nx-ovlreloader](https://github.com/ppkantorski/nx-ovlreloader), clone it into `external/nx-ovlreloader` and build it there too:
 
 ```sh
 cd external/nx-ovlreloader
@@ -97,11 +97,11 @@ export DEVKITPRO=/opt/devkitpro
 make
 ```
 
-The Makefile auto-detects available CPU cores for parallel compilation. Output is `ovll.nsp`, packaged into `out/` with the correct Atmosphère directory structure.
+The Makefile uses all available CPU cores. The output is `ovll.nsp`, placed in `out/` with the Atmosphère folder layout.
 
 ### 3. Distribute (optional)
 
-To produce a zip ready to extract to an SD card:
+To make a zip that can be extracted straight to an SD card:
 
 ```sh
 make dist
@@ -113,7 +113,7 @@ This creates `nx-ovlloader.zip` from the contents of `out/`.
 
 ## Contributing
 
-Contributions are welcome. Please open an [issue](https://github.com/ppkantorski/nx-ovlloader/issues/new) or submit a [pull request](https://github.com/ppkantorski/nx-ovlloader/compare).
+Contributions are welcome. Open an [issue](https://github.com/ppkantorski/nx-ovlloader/issues/new) or send a [pull request](https://github.com/ppkantorski/nx-ovlloader/compare).
 
 [![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/X8X3VR194) [![sponsor](https://github.com/ppkantorski/ppkantorski/raw/refs/heads/main/.pics/sponsor-icon.png)](https://github.com/sponsors/ppkantorski)
 
