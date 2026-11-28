@@ -121,10 +121,10 @@ Contributions are welcome. Open an [issue](https://github.com/ppkantorski/nx-ovl
 
 ## License
 
-Copyright © 2017–2018 nx-hbloader Authors
+Copyright © 2017-2018 nx-hbloader Authors
 
-Copyright © 2020–2023 WerWolv
+Copyright © 2020-2023 WerWolv
 
-Copyright © 2024–2026 ppkantorski
+Copyright © 2024-2026 ppkantorski
 
 Licensed under the [ISC License](LICENSE.md).
